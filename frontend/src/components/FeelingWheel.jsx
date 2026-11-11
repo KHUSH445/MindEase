@@ -132,9 +132,9 @@ export default function FeelingWheel({
         : null;
 
   return (
-    <div className="flex flex-col gap-6 p-6 sm:p-7 glass-card-independent border-2 border-purple-200 bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/40 transition-all duration-300">
+    <div className="flex flex-col gap-5 sm:gap-6 p-3.5 sm:p-6 md:p-7 glass-card-independent border-2 border-purple-200 bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/40 transition-all duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-textPrimary">Feeling Wheel Check-in</h2>
           <p className="text-sm text-textSecondary">

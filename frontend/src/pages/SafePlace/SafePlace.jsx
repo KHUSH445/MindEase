@@ -417,7 +417,7 @@ const toggleReceiveSms = async (id) => {
   const validSosContacts = contacts.filter(c => c.receive_sos !== false && c.email);
 
   return (
-    <div className="p-6 sm:p-8 w-full flex flex-col min-h-screen bg-background relative overflow-y-auto">
+    <div className="p-4 sm:p-6 md:p-8 w-full flex flex-col min-h-screen bg-background relative overflow-y-auto">
       <div className="max-w-5xl mx-auto w-full space-y-8">
         
         {/* Header */}

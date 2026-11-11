@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 import heroImg from "../../assets/hero.png";
 import FeatureGlassPanel from "../../components/common/FeatureGlassPanel.jsx";
 
@@ -118,6 +120,7 @@ function Landing({ user }) {
 
     // Active Navbar Section Tracker
     const [activeNavSection, setActiveNavSection] = useState("home");
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Glass Feature Panel state
     const [isGlassPanelOpen, setIsGlassPanelOpen] = useState(false);
@@ -320,72 +323,113 @@ function Landing({ user }) {
             </div>
 
             {/* 1. TOP NAVIGATION BAR (WITH DYNAMIC ACTIVE SECTION UNDERLINE INDICATOR & PILL LOGIN) */}
-            <header className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-4 md:px-12 py-3.5 backdrop-blur-md bg-white/60 border-b border-purple-200/60 shadow-xs transition-all">
-                <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => scrollToSection("hero")}>
-                    <span className="text-2xl filter drop-shadow-[0_2px_8px_rgba(147,51,234,0.3)]">💜</span>
-                    <h1 className="text-xl font-heading font-bold tracking-tight text-[#230f3e]">
-                        Mind<span className="text-purple-700 font-bold">Ease</span>
-                    </h1>
+            <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 md:px-12 py-3 backdrop-blur-md bg-white/70 border-b border-purple-200/60 shadow-xs transition-all">
+                <div className="flex justify-between items-center max-w-7xl mx-auto">
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => scrollToSection("hero")}>
+                        <span className="text-xl sm:text-2xl filter drop-shadow-[0_2px_8px_rgba(147,51,234,0.3)]">💜</span>
+                        <h1 className="text-lg sm:text-xl font-heading font-bold tracking-tight text-[#230f3e]">
+                            Mind<span className="text-purple-700 font-bold">Ease</span>
+                        </h1>
+                    </div>
+
+                    {/* Desktop Navbar links with smooth sliding active underline indicator */}
+                    <nav className="hidden md:flex items-center gap-6 lg:gap-7 text-sm font-medium text-purple-950/80">
+                        {[
+                            { id: "home", label: "Home", target: "hero" },
+                            { id: "about", label: "About", target: "about" },
+                            { id: "features", label: "Features", target: "features" },
+                            { id: "how-it-works", label: "How It Works", target: "how-it-works" },
+                            { id: "support", label: "Support", target: "support" }
+                        ].map((item) => {
+                            const isActive = activeNavSection === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => scrollToSection(item.target)}
+                                    className={`relative py-1 transition-colors cursor-pointer ${isActive ? "text-purple-700 font-bold" : "hover:text-purple-700"
+                                        }`}
+                                >
+                                    <span>{item.label}</span>
+                                    {isActive && (
+                                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-700 rounded-full transition-all duration-300 animate-fadeIn" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="flex gap-2 sm:gap-2.5 items-center">
+                        {/* Fixed Pill-shaped Login Button */}
+                        <button
+                            onClick={() => navigate("/login")}
+                            className="
+                                text-purple-900 text-xs sm:text-sm font-semibold
+                                px-3 sm:px-5 py-1.5 sm:py-2 rounded-full min-w-0 sm:min-w-[85px]
+                                border border-purple-300/80
+                                bg-white/70 backdrop-blur-sm
+                                flex items-center justify-center text-center
+                                transition-all duration-300
+                                hover:bg-purple-700 hover:text-white hover:border-purple-700
+                                hover:shadow-md hover:shadow-purple-200/60 cursor-pointer
+                            "
+                        >
+                            Log In
+                        </button>
+
+                        {/* Radial Glowing Get Started Button (Darker Corners, Lighter Center) */}
+                        <button
+                            onClick={() => navigate("/signup")}
+                            className="
+                                bg-glowing-purple-btn
+                                text-white text-xs sm:text-sm font-semibold
+                                px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full
+                                flex items-center justify-center text-center
+                                cursor-pointer
+                            "
+                        >
+                            Get Started
+                        </button>
+
+                        {/* Mobile Hamburger Menu Toggle */}
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="md:hidden w-8 h-8 rounded-xl bg-purple-100/70 text-purple-900 flex items-center justify-center hover:bg-purple-200 transition-colors cursor-pointer ml-1"
+                            aria-label="Toggle mobile menu"
+                        >
+                            <FontAwesomeIcon icon={isMobileMenuOpen ? faXmark : faBars} className="text-xs" />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Navbar links with smooth sliding active underline indicator */}
-                <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-purple-950/80">
-                    {[
-                        { id: "home", label: "Home", target: "hero" },
-                        { id: "about", label: "About", target: "about" },
-                        { id: "features", label: "Features", target: "features" },
-                        { id: "how-it-works", label: "How It Works", target: "how-it-works" },
-                        { id: "support", label: "Support", target: "support" }
-                    ].map((item) => {
-                        const isActive = activeNavSection === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => scrollToSection(item.target)}
-                                className={`relative py-1 transition-colors cursor-pointer ${isActive ? "text-purple-700 font-bold" : "hover:text-purple-700"
+                {/* Mobile Dropdown Navigation Menu */}
+                {isMobileMenuOpen && (
+                    <div className="md:hidden mt-3 pt-3 border-t border-purple-200/60 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-xl animate-in slide-in-from-top-2 duration-150">
+                        <div className="flex flex-col gap-1">
+                            {[
+                                { id: "home", label: "Home", target: "hero" },
+                                { id: "about", label: "About", target: "about" },
+                                { id: "features", label: "Features", target: "features" },
+                                { id: "how-it-works", label: "How It Works", target: "how-it-works" },
+                                { id: "support", label: "Support", target: "support" }
+                            ].map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        scrollToSection(item.target);
+                                    }}
+                                    className={`px-3 py-2 text-left text-xs font-semibold rounded-xl transition-colors ${
+                                        activeNavSection === item.id
+                                            ? "bg-purple-100 text-purple-900 font-bold"
+                                            : "text-purple-950/80 hover:bg-purple-50"
                                     }`}
-                            >
-                                <span>{item.label}</span>
-                                {isActive && (
-                                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-700 rounded-full transition-all duration-300 animate-fadeIn" />
-                                )}
-                            </button>
-                        );
-                    })}
-                </nav>
-
-                <div className="flex gap-2.5 items-center">
-                    {/* Fixed Pill-shaped Login Button */}
-                    <button
-                        onClick={() => navigate("/login")}
-                        className="
-                            text-purple-900 text-sm font-semibold
-                            px-5 py-2 rounded-full min-w-[95px]
-                            border border-purple-300/80
-                            bg-white/70 backdrop-blur-sm
-                            flex items-center justify-center text-center
-                            transition-all duration-300
-                            hover:bg-purple-700 hover:text-white hover:border-purple-700
-                            hover:shadow-md hover:shadow-purple-200/60 cursor-pointer
-                        "
-                    >
-                        Log In
-                    </button>
-
-                    {/* Radial Glowing Get Started Button (Darker Corners, Lighter Center) */}
-                    <button
-                        onClick={() => navigate("/signup")}
-                        className="
-                            bg-glowing-purple-btn
-                            text-white text-sm font-semibold
-                            px-5 py-2 rounded-full
-                            flex items-center justify-center text-center
-                            cursor-pointer
-                        "
-                    >
-                        Get Started
-                    </button>
-                </div>
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* SECTION 1: EDITORIAL HERO (SCROLL-DRIVEN & INTERACTIVE) */}
@@ -424,7 +468,7 @@ function Landing({ user }) {
                                 }
                             `}
                             style={{
-                                fontSize: "clamp(4.2rem, 14.5vw, 12.8rem)",
+                                fontSize: "clamp(2.5rem, 12vw, 12.8rem)",
                                 filter: `drop-shadow(0 10px 30px ${currentState.glow})`,
                                 transitionDelay: isAnimating ? "100ms" : "250ms",
                                 letterSpacing: "-0.045em",
@@ -584,7 +628,7 @@ function Landing({ user }) {
                     </div>
 
                     {/* Independent Floating Glass Cards (Grid layout with ample spacing) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 sm:gap-7">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
                         {PLATFORM_TOOLS.map((tool, idx) => (
                             <div
                                 key={tool.key}

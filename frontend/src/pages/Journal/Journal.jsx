@@ -396,7 +396,7 @@ function Journal() {
   const todayStr = getFormattedDate();
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-6 sm:p-8 flex flex-col gap-8">
+    <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col gap-6 sm:gap-8">
 
 
       {/* 1. HEADER & SPOTIFY-STYLE CALM AUDIO PLAYER */}
@@ -481,14 +481,14 @@ function Journal() {
       </header>
 
       {/* 2. MODE / TAB SELECTOR */}
-      <div className="flex border-b border-purple-500/20 gap-2">
+      <div className="flex border-b border-purple-500/20 gap-1.5 sm:gap-2 overflow-x-auto">
         <button
           onClick={() => {
             setActiveTab("free_write");
             if (editingId === null) resetForm();
           }}
           className={`
-            px-6 py-3 font-bold text-sm rounded-t-2xl transition-all duration-200 flex items-center gap-2 border-b-2
+            px-3.5 sm:px-6 py-2.5 sm:py-3 font-bold text-xs sm:text-sm rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 border-b-2 shrink-0
             ${activeTab === "free_write"
               ? "border-purple-600 text-purple-700 dark:text-purple-300 bg-purple-500/10 shadow-xs"
               : "border-transparent text-textSecondary hover:text-textPrimary hover:bg-purple-500/5"}
@@ -504,7 +504,7 @@ function Journal() {
             if (editingId === null) resetForm();
           }}
           className={`
-            px-6 py-3 font-bold text-sm rounded-t-2xl transition-all duration-200 flex items-center gap-2 border-b-2
+            px-3.5 sm:px-6 py-2.5 sm:py-3 font-bold text-xs sm:text-sm rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 border-b-2 shrink-0
             ${activeTab === "trigger_worksheet"
               ? "border-indigo-600 text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 shadow-xs"
               : "border-transparent text-textSecondary hover:text-textPrimary hover:bg-indigo-500/5"}
@@ -524,7 +524,7 @@ function Journal() {
         {activeTab === "free_write" && (
           <div className="flex flex-col gap-8">
             {/* Notebook Form */}
-            <div className="relative rounded-3xl p-6 sm:p-10 border-2 border-slate-900 bg-gradient-to-b from-[#f4eeff] via-[#f8f5ff] to-[#f2eafe] text-slate-900 shadow-xl overflow-hidden transition-all duration-300">
+            <div className="relative rounded-3xl p-4 sm:p-7 md:p-10 border-2 border-slate-900 bg-gradient-to-b from-[#f4eeff] via-[#f8f5ff] to-[#f2eafe] text-slate-900 shadow-xl overflow-hidden transition-all duration-300">
               <div className="flex items-center justify-between border-b-2 border-slate-900/15 pb-4 mb-6">
                 <div>
                   <span className="text-xs font-extrabold uppercase tracking-widest text-purple-900/70 block">

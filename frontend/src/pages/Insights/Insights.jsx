@@ -67,7 +67,7 @@ function Insights() {
 
     if (isLoading) {
         return (
-            <div className="p-6 sm:p-8 w-full min-h-screen bg-background relative overflow-y-auto">
+            <div className="p-4 sm:p-6 md:p-8 w-full min-h-screen bg-background relative overflow-y-auto">
                 <div className="w-full max-w-5xl mx-auto mb-6">
                     <span className="text-xs uppercase tracking-wider font-semibold text-purple-700 bg-purple-100 px-3.5 py-1.5 rounded-full border border-purple-200">
                         Mood & Growth Insights 📊
@@ -94,7 +94,7 @@ function Insights() {
     const highlights = insightsData?.highlights ?? [];
 
     return (
-        <div className="p-6 sm:p-8 w-full min-h-screen bg-background relative overflow-y-auto">
+        <div className="p-4 sm:p-6 md:p-8 w-full min-h-screen bg-background relative overflow-y-auto">
             
             {/* Top Navigation Badge */}
             <div className="w-full max-w-5xl mx-auto flex items-center justify-between mb-6">

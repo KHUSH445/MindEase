@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import re
+import html
 import secrets
 from datetime import datetime, timedelta
 import smtplib
@@ -968,17 +969,23 @@ def send_sos(req: SosRequest, current_user: dict = Depends(get_current_user)):
             "message": "SOS email is not configured on the server, so no email was sent."
         }
 
-    user_name = current_user.get("name") or "A MindEase User"
-    user_email = current_user.get("email") or "Not provided"
-    first_name = user_name.split(" ")[0]
-    subject = f"URGENT: MindEase Safety Alert from {user_name}"
+    raw_user_name = (current_user.get("name") or "A MindEase User").strip()
+    raw_user_email = (current_user.get("email") or "Not provided").strip()
+    # Sanitize header strings against SMTP header injection (strip CR/LF)
+    header_user_name = re.sub(r"[\r\n]+", " ", raw_user_name).strip()
+    header_user_email = re.sub(r"[\r\n]+", " ", raw_user_email).strip()
+    # HTML escape user-supplied fields for safe email body rendering
+    escaped_user_name = html.escape(raw_user_name)
+    escaped_user_email = html.escape(raw_user_email)
+    first_name = html.escape(raw_user_name.split(" ")[0])
+    subject = f"URGENT: MindEase Safety Alert from {header_user_name}"
     body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
         <div style="background-color: #ef4444; color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; margin-bottom: 20px;">
             ⚠️ MindEase Immediate Safety Alert
         </div>
         <p style="font-size: 16px; color: #1e293b; line-height: 1.5;">
-            <strong>{user_name}</strong> (<a href="mailto:{user_email}" style="color: #6366f1;">{user_email}</a>) has listed you as their trusted emergency contact and triggered an SOS alert via MindEase.
+            <strong>{escaped_user_name}</strong> (<a href="mailto:{escaped_user_email}" style="color: #6366f1;">{escaped_user_email}</a>) has listed you as their trusted emergency contact and triggered an SOS alert via MindEase.
         </p>
         <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 20px 0; border-radius: 4px;">
             <p style="margin: 0; color: #991b1b; font-size: 15px; font-weight: 600;">
@@ -987,13 +994,13 @@ def send_sos(req: SosRequest, current_user: dict = Depends(get_current_user)):
         </div>
         <p style="font-size: 15px; color: #334155; line-height: 1.6;">
             <strong>What you can do:</strong><br>
-            • Reply directly to this email to reach {first_name} ({user_email})<br>
+            • Reply directly to this email to reach {first_name} ({escaped_user_email})<br>
             • Call or message them immediately to check on their well-being<br>
             • If you are concerned for their immediate physical safety, reach out to local emergency services or national crisis helplines (e.g., Tele-MANAS at 14416 / 1800-891-4416 in India, or 988 in the US/Canada).
         </p>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <p style="font-size: 12px; color: #64748b; margin: 0;">
-            This automated alert was sent via MindEase on behalf of {user_name} ({user_email}).
+            This automated alert was sent via MindEase on behalf of {escaped_user_name} ({escaped_user_email}).
         </p>
     </div>
     """
@@ -1005,10 +1012,10 @@ def send_sos(req: SosRequest, current_user: dict = Depends(get_current_user)):
 
         for recipient in recipients:
             msg = MIMEMultipart()
-            msg["From"] = f"{user_name} via MindEase <{sender_email}>"
+            msg["From"] = f"{header_user_name} via MindEase <{sender_email}>"
             msg["To"] = recipient
-            if user_email and "@" in user_email:
-                msg["Reply-To"] = f"{user_name} <{user_email}>"
+            if header_user_email and "@" in header_user_email:
+                msg["Reply-To"] = f"{header_user_name} <{header_user_email}>"
             msg["Subject"] = subject
             msg.attach(MIMEText(body, "html"))
 
@@ -3247,15 +3254,6 @@ if os.environ.get("TIMING_LOGS") == "1":
         return wrapper
 
     evaluate_safety = _timed(evaluate_safety, "safety check")
-    generate_response = _timed(generate_response, "reply (retrieval + LLM)")
-    save_chat = _timed(save_chat, "save to database")
-
-    @app.middleware("http")
-    async def _log_request_time(request, call_next):
-        t = _time.perf_counter()
-        response = await call_next(request)
-        print(f"[timing] {request.method} {request.url.path}: {_time.perf_counter() - t:.2f}s total", flush=True)
-        return response
     generate_response = _timed(generate_response, "reply (retrieval + LLM)")
     save_chat = _timed(save_chat, "save to database")
 

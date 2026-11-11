@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faComment, faTrash, faMessage } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faComment, faTrash, faMessage, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 function AISidebar({
     conversations = [],
@@ -7,6 +7,8 @@ function AISidebar({
     onSelectConversation,
     onNewChat,
     onDeleteConversation,
+    isOpen = false,
+    onClose,
 }) {
     // Helper to group conversations by date (Today, Yesterday, Previous)
     const groupConversations = () => {
@@ -34,6 +36,16 @@ function AISidebar({
 
     const { today, yesterday, previous } = groupConversations();
 
+    const handleSelect = (convId) => {
+        onSelectConversation(convId);
+        if (onClose) onClose();
+    };
+
+    const handleNew = () => {
+        onNewChat();
+        if (onClose) onClose();
+    };
+
     const renderGroup = (title, items) => {
         if (items.length === 0) return null;
 
@@ -48,7 +60,7 @@ function AISidebar({
                         return (
                             <div
                                 key={conv.conversation_id}
-                                onClick={() => onSelectConversation(conv.conversation_id)}
+                                onClick={() => handleSelect(conv.conversation_id)}
                                 className={`group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer text-xs transition-all ${
                                     isActive
                                         ? "bg-primaryLight text-primary font-medium border border-primary/20 shadow-xs"
@@ -83,17 +95,28 @@ function AISidebar({
         );
     };
 
-    return (
-        <aside className="w-64 h-[calc(100vh-4rem)] bg-white border-r border-border flex flex-col shrink-0">
-            {/* New Chat Action */}
-            <div className="p-4 border-b border-border/50">
+    const sidebarContent = (
+        <div className="flex flex-col h-full w-full bg-white">
+            {/* Header / New Chat Action */}
+            <div className="p-4 border-b border-border/50 flex items-center justify-between gap-2">
                 <button
-                    onClick={onNewChat}
-                    className="w-full bg-primary hover:bg-primaryDark text-white py-2.5 px-4 rounded-xl font-medium text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow cursor-pointer"
+                    onClick={handleNew}
+                    className="flex-1 bg-primary hover:bg-primaryDark text-white py-2.5 px-4 rounded-xl font-medium text-xs flex items-center justify-center gap-2 shadow-sm transition-all hover:shadow cursor-pointer"
                 >
                     <FontAwesomeIcon icon={faPlus} />
                     <span>New Chat</span>
                 </button>
+
+                {/* Mobile Close Button */}
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="md:hidden w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                        aria-label="Close chat sidebar"
+                    >
+                        <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                    </button>
+                )}
             </div>
 
             {/* Conversation List */}
@@ -112,7 +135,33 @@ function AISidebar({
                     </>
                 )}
             </div>
-        </aside>
+        </div>
+    );
+
+    return (
+        <>
+            {/* Desktop Persistent Sidebar */}
+            <aside className="hidden md:flex w-64 h-full border-r border-border flex-col shrink-0">
+                {sidebarContent}
+            </aside>
+
+            {/* Mobile Slide-over Drawer with Backdrop */}
+            {isOpen && (
+                <div className="md:hidden fixed inset-0 z-50 flex">
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity"
+                        onClick={onClose}
+                        aria-hidden="true"
+                    />
+
+                    {/* Drawer Content */}
+                    <aside className="relative w-72 max-w-[80vw] h-full bg-white shadow-2xl z-10 flex flex-col animate-in slide-in-from-left duration-200">
+                        {sidebarContent}
+                    </aside>
+                </div>
+            )}
+        </>
     );
 }
 

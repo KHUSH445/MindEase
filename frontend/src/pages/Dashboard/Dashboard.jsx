@@ -112,7 +112,7 @@ function Dashboard() {
   const greetingObj = getGreetingText();
 
   return (
-    <div className="relative p-6 sm:p-8 max-w-5xl mx-auto w-full flex flex-col gap-8 overflow-hidden">
+    <div className="relative p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full flex flex-col gap-6 sm:gap-8 overflow-hidden">
 
 
       {/* BACKGROUND BOTANICAL LEAF DECORATIONS (SUBTLE TOP-RIGHT ATMOSPHERE) */}
@@ -127,11 +127,11 @@ function Dashboard() {
       {/* 1. GREETING HEADER */}
       <header className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-heading text-textPrimary flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold font-heading text-textPrimary flex items-center gap-2 sm:gap-3 flex-wrap">
             <span>{greetingObj.text}</span>
             <span>{greetingObj.emoji}</span>
           </h1>
-          <p className="text-textSecondary mt-1 text-base">
+          <p className="text-textSecondary mt-1 text-sm sm:text-base">
             Let's check in with yourself. MindEase is here to support you.
           </p>
         </div>

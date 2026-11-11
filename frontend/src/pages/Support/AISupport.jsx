@@ -6,6 +6,8 @@ import {
   faPaperPlane,
   faMicrophone,
   faStop,
+  faMessage,
+  faBars,
 } from "@fortawesome/free-solid-svg-icons";
 import { romanizeSpokenText } from "../../utils/transliterate";
 
@@ -36,6 +38,7 @@ function AISupport() {
 
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [detectedEmotion, setDetectedEmotion] = useState("neutral");
   const [mentalState, setMentalState] = useState("");
@@ -488,20 +491,39 @@ function AISupport() {
         onSelectConversation={handleSelectConversation}
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col h-full bg-background p-6 min-w-0 overflow-hidden">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-xl font-heading font-semibold text-textPrimary">
-              AI Support Companion
-            </h1>
-            <p className="text-xs text-textSecondary mt-0.5">
-              Your compassionate, confidential wellness companion
-            </p>
+      <div className="flex-1 flex flex-col h-full bg-background p-3 sm:p-5 md:p-6 min-w-0 overflow-hidden">
+        <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-border text-xs font-semibold text-textSecondary hover:text-textPrimary hover:border-primary/40 shadow-2xs transition-all cursor-pointer"
+              title="Open conversation history"
+            >
+              <FontAwesomeIcon icon={faMessage} className="text-primary text-xs" />
+              <span>Chats</span>
+              {conversations.length > 0 && (
+                <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {conversations.length}
+                </span>
+              )}
+            </button>
+
+            <div>
+              <h1 className="text-lg sm:text-xl font-heading font-semibold text-textPrimary leading-tight">
+                AI Support Companion
+              </h1>
+              <p className="text-[11px] sm:text-xs text-textSecondary mt-0.5 hidden xs:block">
+                Your compassionate, confidential wellness companion
+              </p>
+            </div>
           </div>
 
-          <div className="bg-primaryLight/80 backdrop-blur px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-xs">
+          <div className="bg-primaryLight/80 backdrop-blur px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold shadow-xs shrink-0">
             <span className="text-textPrimary">Detected: </span>
             <span className={getEmotionColor()}>
               {detectedEmotion}{mentalState && ` | ${mentalState}`}
@@ -624,15 +646,15 @@ function AISupport() {
             </div>
           )}
 
-          <div className="flex gap-2.5 items-center">
+          <div className="flex gap-1.5 sm:gap-2.5 items-center">
             <input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder={isListening ? "Listening... Speak now (speech transcribes here)..." : "Type your message..."}
-              className={`flex-1 p-3.5 rounded-2xl border ${
+              placeholder={isListening ? "Listening... Speak now..." : "Type your message..."}
+              className={`flex-1 min-w-0 p-2.5 sm:p-3.5 rounded-2xl border ${
                 isListening ? "border-red-400 ring-1 ring-red-400" : "border-border"
-              } bg-white text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-xs transition-all`}
+              } bg-white text-xs sm:text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-xs transition-all`}
               onKeyDown={e => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   if (isListening) stopListening();
@@ -647,9 +669,10 @@ function AISupport() {
               onClick={handleVoiceLangToggle}
               disabled={isLoading}
               title={`Voice Language Mode: ${voiceLang === "hi-IN" ? "Hinglish / Hindi (Romanized)" : "English"}. Click to toggle.`}
-              className="px-3 py-3.5 rounded-2xl border border-border bg-white text-xs font-semibold text-textSecondary hover:text-primary hover:border-primary/40 transition-all shadow-2xs shrink-0 flex items-center gap-1 cursor-pointer"
+              className="px-2 sm:px-3 py-2.5 sm:py-3.5 rounded-2xl border border-border bg-white text-[11px] sm:text-xs font-semibold text-textSecondary hover:text-primary hover:border-primary/40 transition-all shadow-2xs shrink-0 flex items-center gap-1 cursor-pointer"
             >
-              <span>{voiceLang === "hi-IN" ? "🇮🇳 Hinglish" : "🌐 English"}</span>
+              <span className="hidden sm:inline">{voiceLang === "hi-IN" ? "🇮🇳 Hinglish" : "🌐 English"}</span>
+              <span className="sm:hidden">{voiceLang === "hi-IN" ? "🇮🇳" : "🌐"}</span>
             </button>
 
             <button
@@ -657,7 +680,7 @@ function AISupport() {
               onClick={startListening}
               disabled={isLoading}
               title={isListening ? "Stop Voice Input" : "Start Voice Input"}
-              className={`px-4 py-3.5 rounded-2xl border transition-all shrink-0 cursor-pointer ${
+              className={`px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl border transition-all shrink-0 cursor-pointer text-xs sm:text-sm ${
                 isListening
                   ? "bg-red-500 border-red-500 text-white animate-pulse shadow-md"
                   : "border-border bg-white text-gray-600 hover:text-primary hover:bg-primaryLight/50 shadow-2xs"
@@ -673,7 +696,7 @@ function AISupport() {
                 handleSend();
               }}
               disabled={isLoading || !input.trim()}
-              className="bg-primary hover:bg-primaryDark text-white px-5 py-3.5 rounded-2xl font-medium transition-all disabled:opacity-50 shadow-sm hover:shadow shrink-0 cursor-pointer"
+              className="bg-primary hover:bg-primaryDark text-white px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl font-medium transition-all disabled:opacity-50 shadow-sm hover:shadow shrink-0 cursor-pointer text-xs sm:text-sm"
               title="Send message"
             >
               <FontAwesomeIcon icon={faPaperPlane} />

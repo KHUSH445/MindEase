@@ -97,11 +97,11 @@ function FeatureGlassPanel({
             {/* Glass Modal Card */}
             <div 
                 className="
-                    relative w-full max-w-2xl rounded-3xl p-6 sm:p-8
-                    bg-white/90 border border-white/80
+                    relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl p-4 sm:p-7 md:p-8
+                    bg-white/95 border border-white/80
                     shadow-2xl shadow-purple-900/35
                     backdrop-blur-2xl text-[#230f3e]
-                    overflow-hidden select-none
+                    select-none
                     transition-all duration-300 transform scale-100
                 "
                 onClick={(e) => e.stopPropagation()}

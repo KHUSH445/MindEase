@@ -53,9 +53,9 @@ function Signup() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="min-h-screen flex items-center justify-center bg-background px-4 sm:px-6 py-6">
 
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-8">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-5 sm:p-8">
 
             {/* Logo */}
             <div className="text-center mb-8">

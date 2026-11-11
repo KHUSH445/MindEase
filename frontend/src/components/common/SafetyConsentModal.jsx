@@ -315,7 +315,7 @@ export default function SafetyConsentModal({
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
       <div className="fixed inset-0" onClick={isSubmittingSos ? undefined : onClose} />
 
-      <div className="relative w-full max-w-xl my-auto rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 sm:p-8 z-10 overflow-hidden text-slate-800">
+      <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto my-auto rounded-3xl bg-white shadow-2xl border border-slate-200 p-4 sm:p-7 md:p-8 z-10 text-slate-800">
         <button
           onClick={onClose}
           disabled={isSubmittingSos}

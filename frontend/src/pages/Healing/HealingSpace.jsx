@@ -72,7 +72,7 @@ function HealingSpace() {
   }
 
   return (
-    <div className="p-6 sm:p-8 w-full flex flex-col min-h-screen bg-background relative overflow-y-auto">
+    <div className="p-4 sm:p-6 md:p-8 w-full flex flex-col min-h-screen bg-background relative overflow-y-auto">
       
       {/* Top Navigation Bar */}
       <div className="w-full max-w-5xl mx-auto flex items-center justify-between mb-6">

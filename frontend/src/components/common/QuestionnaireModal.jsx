@@ -65,7 +65,7 @@ function QuestionnaireModal({ isOpen, onClose, onSubmitted }) {
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md transition-opacity duration-300">
       <div className="fixed inset-0 cursor-pointer" onClick={submitting ? undefined : onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-xl my-auto rounded-3xl bg-white shadow-2xl border border-purple-100 p-6 sm:p-8 z-10 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto my-auto rounded-3xl bg-white shadow-2xl border border-purple-100 p-4 sm:p-7 md:p-8 z-10 transform transition-all animate-in fade-in zoom-in-95 duration-200">
         <div className="absolute -top-16 -right-16 w-44 h-44 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
 
         <button
