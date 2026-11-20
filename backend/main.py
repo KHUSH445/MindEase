@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import List, Optional
 from contextlib import asynccontextmanager
 import requests  # type: ignore # pyrefly: ignore [missing-import]
+import hashlib
 
 # Add backend directory to sys.path for absolute and relative import compatibility
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +24,7 @@ from fastapi import FastAPI, Request, Response, Depends, HTTPException, status  
 from fastapi.responses import RedirectResponse, StreamingResponse  # type: ignore # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field  # type: ignore # pyrefly: ignore [missing-import]
-from transformers import pipeline  # type: ignore # pyrefly: ignore [missing-import]
+# from transformers import pipeline  # type: ignore # pyrefly: ignore [missing-import]
 from bson import ObjectId  # type: ignore # pyrefly: ignore [missing-import]
 from langdetect import detect as detect_language, DetectorFactory  # type: ignore # pyrefly: ignore [missing-import]
 from langdetect.lang_detect_exception import LangDetectException  # type: ignore # pyrefly: ignore [missing-import]
@@ -95,6 +96,7 @@ _mental_model = None
 _safety_model = None
 
 def get_emotion_model():
+    from transformers import pipeline
     global _emotion_model
     if _emotion_model is None:
         LOCAL_EMOTION_PATH = "training/models/emotion-classifier"
@@ -116,6 +118,7 @@ def get_emotion_model():
     return _emotion_model
 
 def get_mental_model():
+    from transformers import pipeline
     global _mental_model
     if _mental_model is None:
         LOCAL_RISK_PATH = "training/models/risk-classifier"
@@ -136,6 +139,7 @@ def get_mental_model():
     return _mental_model
 
 def get_safety_model():
+    from transformers import pipeline
     global _safety_model
     if os.environ.get("DISABLE_SAFETY_MODEL", "").strip().lower() in ("1", "true", "yes"):
         return None  # skip the slow zero-shot model; keywords + fine-tuned classifier still decide
@@ -223,6 +227,138 @@ def set_auth_cookie(response: Response, token: str):
         secure=COOKIE_SECURE,  # HTTPS-only cookie when the frontend is served over HTTPS
         max_age=7 * 24 * 3600
     )
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    email = req.email.lower().strip()
+
+    generic_message = {
+        "message": "If an eligible account exists, a password reset link has been sent."
+    }
+
+    users_col = db_manager.users
+    if not db_manager.is_connected() or users_col is None:
+        raise HTTPException(status_code=503, detail="Database service unavailable.")
+
+    user = users_col.find_one({
+        "email": email,
+        "auth_provider": "local"
+    })
+
+    # Always return the same response for unknown and OAuth-only accounts.
+    if not user:
+        return generic_message
+
+    sender_email = os.environ.get("SENDER_EMAIL")
+    sender_password = os.environ.get("SENDER_PASSWORD")
+
+    if not sender_email or not sender_password:
+        print("[password-reset] Email configuration is missing.")
+        return generic_message
+
+    reset_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    expiry = datetime.utcnow() + timedelta(minutes=20)
+
+    users_col.update_one(
+        {"_id": user["_id"]},
+        {"$set": {
+            "password_reset_token_hash": token_hash,
+            "password_reset_expires_at": expiry
+        }}
+    )
+
+    reset_link = f"{FRONTEND_URL}/reset-password?token={reset_token}"
+
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = email
+    msg["Subject"] = "MindEase - Password Reset"
+
+    msg.attach(MIMEText(
+        f"""Hello {user.get('name', 'User')},
+
+We received a request to reset your MindEase password.
+
+Click the link below to create a new password:
+{reset_link}
+
+This link expires in 20 minutes. If you did not request this,
+you can safely ignore this email.
+
+MindEase Team""",
+        "plain"
+    ))
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+    except Exception as e:
+        print(f"[password-reset] Email delivery failed: {e}")
+        users_col.update_one(
+            {"_id": user["_id"], "password_reset_token_hash": token_hash},
+            {"$unset": {
+                "password_reset_token_hash": "",
+                "password_reset_expires_at": ""
+            }}
+        )
+
+    return generic_message
+
+
+@app.post("/auth/reset-password")
+def reset_password(req: ResetPasswordRequest):
+    if len(req.password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least 8 characters."
+        )
+
+    token_hash = hashlib.sha256(req.token.encode()).hexdigest()
+
+    users_col = db_manager.users
+    if not db_manager.is_connected() or users_col is None:
+        raise HTTPException(status_code=503, detail="Database service unavailable.")
+
+    user = users_col.find_one({
+        "password_reset_token_hash": token_hash,
+        "password_reset_expires_at": {"$gt": datetime.utcnow()},
+        "auth_provider": "local"
+    })
+
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="This password reset link is invalid or has expired."
+        )
+
+    result = users_col.update_one(
+        {
+            "_id": user["_id"],
+            "password_reset_token_hash": token_hash,
+            "password_reset_expires_at": {"$gt": datetime.utcnow()}
+        },
+        {"$set": {
+            "password_hash": hash_password(req.password),
+            "updated_at": datetime.now()
+        },
+        "$inc": {"token_version": 1},
+        "$unset": {
+            "password_reset_token_hash": "",
+            "password_reset_expires_at": ""
+        }}
+    )
+
+    if result.modified_count != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="This password reset link is invalid or has expired."
+        )
+
+    return {"message": "Password reset successfully. Please log in again."}
 
 @app.post("/auth/signup")
 def signup(req: SignupRequest, response: Response):
