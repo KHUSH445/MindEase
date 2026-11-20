@@ -1,18 +1,26 @@
+
 // In development this defaults to http://127.0.0.1:8000.
 // For production, set VITE_API_URL in your Vercel / Netlify environment to your
-// Render / Railway backend URL (e.g. https://mindease-backend.onrender.com).
+// Render / Railway backend URL.
 export const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 function getAuthHeaders() {
     const headers = {
         "Content-Type": "application/json",
     };
+
     const token = localStorage.getItem("mindease_token");
+
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;
     }
+
     return headers;
 }
+
+// =========================
+// AUTHENTICATION
+// =========================
 
 export async function loginUser(email, password) {
     const response = await fetch(`${API_URL}/auth/login`, {
@@ -23,6 +31,7 @@ export async function loginUser(email, password) {
     });
 
     const data = await response.json();
+
     if (!response.ok) {
         throw new Error(data.detail || "Login failed");
     }
@@ -30,6 +39,7 @@ export async function loginUser(email, password) {
     if (data.token) {
         localStorage.setItem("mindease_token", data.token);
     }
+
     return data;
 }
 
@@ -42,6 +52,7 @@ export async function signupUser(name, email, password) {
     });
 
     const data = await response.json();
+
     if (!response.ok) {
         throw new Error(data.detail || "Signup failed");
     }
@@ -49,6 +60,7 @@ export async function signupUser(name, email, password) {
     if (data.token) {
         localStorage.setItem("mindease_token", data.token);
     }
+
     return data;
 }
 
@@ -76,12 +88,56 @@ export async function logoutUser() {
     } catch (e) {
         console.error("Logout API error:", e);
     }
+
     localStorage.removeItem("mindease_token");
     localStorage.removeItem("currentUser");
 }
 
+// =========================
+// PASSWORD RESET
+// =========================
+
+export async function requestPasswordReset(email) {
+    const response = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.detail || "Unable to request password reset.");
+    }
+
+    return data;
+}
+
+export async function resetPassword(token, password) {
+    const response = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ token, password }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.detail || "Unable to reset password.");
+    }
+
+    return data;
+}
+
+// =========================
+// CHAT
+// =========================
+
 export async function sendChatMessage(message, conversationId = null) {
     const payload = { message };
+
     if (conversationId) {
         payload.conversation_id = conversationId;
     }
@@ -156,6 +212,74 @@ export async function fetchChatHistory() {
     return await response.json();
 }
 
+// Streams a chat reply from /chat/stream (Server-Sent Events).
+export async function streamChatMessage(message, conversationId = null, onDelta = () => {}) {
+    const payload = { message };
+
+    if (conversationId) {
+        payload.conversation_id = conversationId;
+    }
+
+    const response = await fetch(`${API_URL}/chat/stream`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        credentials: "include",
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok || !response.body) {
+        throw new Error("Failed to connect to MindEase backend");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let buffer = "";
+    let receivedText = false;
+
+    const fail = (msg) => {
+        const err = new Error(msg);
+        err.receivedText = receivedText;
+        return err;
+    };
+
+    while (true) {
+        const { value, done } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        let sep;
+
+        while ((sep = buffer.indexOf("\n\n")) !== -1) {
+            const raw = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+
+            const line = raw.split("\n").find((l) => l.startsWith("data:"));
+
+            if (!line) continue;
+
+            const event = JSON.parse(line.slice(5).trim());
+
+            if (event.type === "delta") {
+                receivedText = true;
+                onDelta(event.text);
+            } else if (event.type === "done") {
+                return event;
+            } else if (event.type === "error") {
+                throw fail(event.message || "Stream error");
+            }
+        }
+    }
+
+    throw fail("The reply was interrupted");
+}
+
+// =========================
+// JOURNAL
+// =========================
+
 export async function fetchJournalEntries() {
     const response = await fetch(`${API_URL}/journal`, {
         method: "GET",
@@ -222,12 +346,19 @@ export async function deleteJournalEntry(id) {
     return await response.json();
 }
 
+// =========================
+// INSIGHTS AND DASHBOARD
+// =========================
+
 export async function fetchInsights(view = "weekly") {
-    const response = await fetch(`${API_URL}/insights?view=${encodeURIComponent(view)}`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-        credentials: "include",
-    });
+    const response = await fetch(
+        `${API_URL}/insights?view=${encodeURIComponent(view)}`,
+        {
+            method: "GET",
+            headers: getAuthHeaders(),
+            credentials: "include",
+        }
+    );
 
     if (!response.ok) {
         throw new Error("Failed to fetch insights");
@@ -250,7 +381,15 @@ export async function fetchDashboard() {
     return await response.json();
 }
 
-export async function saveMoodCheckin(core_emotion, specific_feeling = null, granular_feeling = null) {
+// =========================
+// MOOD CHECK-IN
+// =========================
+
+export async function saveMoodCheckin(
+    core_emotion,
+    specific_feeling = null,
+    granular_feeling = null
+) {
     const response = await fetch(`${API_URL}/mood-checkin`, {
         method: "POST",
         headers: getAuthHeaders(),
@@ -258,7 +397,7 @@ export async function saveMoodCheckin(core_emotion, specific_feeling = null, gra
         body: JSON.stringify({
             core_emotion,
             specific_feeling,
-            granular_feeling
+            granular_feeling,
         }),
     });
 
@@ -268,6 +407,11 @@ export async function saveMoodCheckin(core_emotion, specific_feeling = null, gra
 
     return await response.json();
 }
+
+// =========================
+// QUESTIONNAIRE
+// =========================
+
 export async function fetchQuestionnairePrompts() {
     const response = await fetch(`${API_URL}/questionnaire/prompts`, {
         method: "GET",
@@ -292,24 +436,32 @@ export async function submitQuestionnaire(answers, note = "") {
 
     if (!response.ok) {
         let detail = `HTTP ${response.status}`;
+
         try {
             const data = await response.json();
+
             if (typeof data.detail === "string") {
                 detail = data.detail;
             } else if (Array.isArray(data.detail)) {
-                detail = data.detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+                detail = data.detail
+                    .map((d) => d.msg || JSON.stringify(d))
+                    .join("; ");
             }
         } catch {
-            // response body wasn't JSON - keep the HTTP status as the detail
+            // Response body wasn't JSON.
         }
+
         throw new Error(`Failed to submit questionnaire: ${detail}`);
     }
 
     return await response.json();
 }
 
+// =========================
+// SOS ALERTS
+// =========================
+
 // Sends an SOS email to the logged-in user's SOS-enabled trusted contacts.
-// Resolves to { sent, simulated, message }; throws with the server's reason on failure.
 export async function sendSosAlert(emails = [], automatic = false) {
     const response = await fetch(`${API_URL}/api/sos`, {
         method: "POST",
@@ -319,6 +471,7 @@ export async function sendSosAlert(emails = [], automatic = false) {
     });
 
     const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
         throw new Error(
             response.status === 401
@@ -326,11 +479,11 @@ export async function sendSosAlert(emails = [], automatic = false) {
                 : data.detail || "Failed to send SOS alert"
         );
     }
+
     return data;
 }
 
-// Sends an SMS SOS request to the logged-in user's explicitly SMS-enabled contacts.
-// The backend resolves contact IDs against the authenticated user's database records.
+// Sends an SMS SOS request to explicitly SMS-enabled contacts.
 export async function sendSmsSosAlert(contactIds = []) {
     const response = await fetch(`${API_URL}/api/sos/sms`, {
         method: "POST",
@@ -340,6 +493,7 @@ export async function sendSmsSosAlert(contactIds = []) {
     });
 
     const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
         throw new Error(
             response.status === 401
@@ -347,15 +501,22 @@ export async function sendSmsSosAlert(contactIds = []) {
                 : data.detail || "Failed to request SMS SOS alert"
         );
     }
+
     return data;
 }
+
+// =========================
+// SAFETY
+// =========================
 
 export async function getSafetyActivities() {
     const response = await fetch(`${API_URL}/api/safety-activities`, {
         headers: getAuthHeaders(),
         credentials: "include",
     });
+
     if (!response.ok) return [];
+
     return await response.json();
 }
 
@@ -364,9 +525,21 @@ export async function getSafetyStatus() {
         headers: getAuthHeaders(),
         credentials: "include",
     });
-    if (!response.ok) return { email_configured: false, sms_configured: false, sms_mode: "demo" };
+
+    if (!response.ok) {
+        return {
+            email_configured: false,
+            sms_configured: false,
+            sms_mode: "demo",
+        };
+    }
+
     return await response.json();
 }
+
+// =========================
+// PROFILE
+// =========================
 
 export async function updateProfile(name, email) {
     const response = await fetch(`${API_URL}/auth/me`, {
@@ -377,81 +550,44 @@ export async function updateProfile(name, email) {
     });
 
     const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
         throw new Error(data.detail || "Failed to update profile");
     }
+
     return data;
 }
 
-// Streams a chat reply from /chat/stream (Server-Sent Events).
-// onDelta(textPiece) is called as the reply is written; resolves with the final payload
-// (same fields as sendChatMessage). Throws if the stream fails; err.receivedText tells the
-// caller whether part of the reply had already arrived.
-export async function streamChatMessage(message, conversationId = null, onDelta = () => {}) {
-    const payload = { message };
-    if (conversationId) {
-        payload.conversation_id = conversationId;
-    }
+// =========================
+// NEARBY PROFESSIONALS
+// =========================
 
-    const response = await fetch(`${API_URL}/chat/stream`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        credentials: "include",
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok || !response.body) {
-        throw new Error("Failed to connect to MindEase backend");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let receivedText = false;
-
-    const fail = (msg) => {
-        const err = new Error(msg);
-        err.receivedText = receivedText;
-        return err;
-    };
-
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let sep;
-        while ((sep = buffer.indexOf("\n\n")) !== -1) {
-            const raw = buffer.slice(0, sep);
-            buffer = buffer.slice(sep + 2);
-            const line = raw.split("\n").find((l) => l.startsWith("data:"));
-            if (!line) continue;
-
-            const event = JSON.parse(line.slice(5).trim());
-            if (event.type === "delta") {
-                receivedText = true;
-                onDelta(event.text);
-            } else if (event.type === "done") {
-                return event;
-            } else if (event.type === "error") {
-                throw fail(event.message || "Stream error");
-            }
-        }
-    }
-
-    throw fail("The reply was interrupted");
-}
-
-export async function fetchNearbyProfessionals({ lat, lon, limit = 8, query, city } = {}) {
+export async function fetchNearbyProfessionals({
+    lat,
+    lon,
+    limit = 8,
+    query,
+    city
+} = {}) {
     const params = new URLSearchParams();
-    if (lat !== undefined && lat !== null) params.append("lat", lat);
-    if (lon !== undefined && lon !== null) params.append("lon", lon);
+
+    if (lat !== undefined && lat !== null) {
+        params.append("lat", lat);
+    }
+
+    if (lon !== undefined && lon !== null) {
+        params.append("lon", lon);
+    }
+
     if (limit) params.append("limit", limit);
     if (query) params.append("query", query);
     if (city) params.append("city", city);
 
     const queryString = params.toString();
-    const url = `${API_URL}/api/professionals/nearby${queryString ? `?${queryString}` : ""}`;
+
+    const url = `${API_URL}/api/professionals/nearby${
+        queryString ? `?${queryString}` : ""
+    }`;
 
     const response = await fetch(url, {
         method: "GET",
@@ -460,9 +596,10 @@ export async function fetchNearbyProfessionals({ lat, lon, limit = 8, query, cit
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to fetch nearby professionals (${response.status})`);
+        throw new Error(
+            `Failed to fetch nearby professionals (${response.status})`
+        );
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
 }

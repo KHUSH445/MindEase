@@ -187,6 +187,13 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str    
+
 class ContactRequest(BaseModel):
     name: str
     phone: str = ""

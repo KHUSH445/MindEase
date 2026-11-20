@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, Routes, Route } from "react-router-dom";
 
@@ -13,6 +14,8 @@ import Professionals from "./pages/Professionals/Professionals";
 import HealingSpace from "./pages/Healing/HealingSpace";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 import { getCurrentUser } from "./services/api";
 
@@ -33,40 +36,56 @@ function App() {
     const [demoLocked, setDemoLocked] = useState(false);
     const [showDemoPopup, setShowDemoPopup] = useState(false);
 
+    // Pages that should not display the main navigation bar
     const isLanding =
         location.pathname === "/" ||
         location.pathname === "/login" ||
-        location.pathname === "/signup";
+        location.pathname === "/signup" ||
+        location.pathname === "/forgot-password" ||
+        location.pathname === "/reset-password";
 
     // =========================
-    // OAUTH & AUTHENTICATION CHECK
+    // AUTHENTICATION CHECK
     // =========================
 
     useEffect(() => {
         const verifyAuth = async () => {
-            // Parse token from URL if returned from Google/GitHub OAuth callback
+            // OAuth tokens are returned to the dashboard.
+            // Never consume password-reset tokens from /reset-password.
             const queryParams = new URLSearchParams(window.location.search);
             const tokenFromUrl = queryParams.get("token");
 
-            if (tokenFromUrl) {
+            if (tokenFromUrl && location.pathname === "/dashboard") {
                 localStorage.setItem("mindease_token", tokenFromUrl);
-                // Clean token query from address bar
-                window.history.replaceState({}, document.title, window.location.pathname);
+
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    window.location.pathname
+                );
             }
 
             try {
                 const currentUser = await getCurrentUser();
+
                 if (currentUser) {
                     setUser(currentUser);
-                    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-                    
-                    // CRITICAL FIX: Authenticated user clears demo state completely
+                    localStorage.setItem(
+                        "currentUser",
+                        JSON.stringify(currentUser)
+                    );
+
+                    // Authenticated users should not have demo restrictions.
                     localStorage.removeItem("demoStartedAt");
                     localStorage.removeItem("demoLocked");
+
                     setDemoLocked(false);
                     setShowDemoPopup(false);
 
-                    if (location.pathname === "/login" || location.pathname === "/signup") {
+                    if (
+                        location.pathname === "/login" ||
+                        location.pathname === "/signup"
+                    ) {
                         const targetPath = location.state?.from || "/dashboard";
                         navigate(targetPath, { replace: true });
                     }
@@ -74,15 +93,37 @@ function App() {
                     setUser(null);
                     localStorage.removeItem("currentUser");
 
-                    const isDemoActive = !!localStorage.getItem("demoStartedAt") && localStorage.getItem("demoLocked") !== "true";
+                    const isDemoActive =
+                        !!localStorage.getItem("demoStartedAt") &&
+                        localStorage.getItem("demoLocked") !== "true";
 
-                    const protectedRoutes = ["/dashboard", "/support", "/journal", "/insights", "/healing", "/healing-space", "/settings", "/safeplace", "/professionals"];
-                    if (protectedRoutes.includes(location.pathname) && !isDemoActive) {
-                        navigate("/login", { state: { from: location.pathname } });
+                    const protectedRoutes = [
+                        "/dashboard",
+                        "/support",
+                        "/journal",
+                        "/insights",
+                        "/healing",
+                        "/healing-space",
+                        "/settings",
+                        "/safeplace",
+                        "/safe-place",
+                        "/professionals"
+                    ];
+
+                    if (
+                        protectedRoutes.includes(location.pathname) &&
+                        !isDemoActive
+                    ) {
+                        navigate("/login", {
+                            state: { from: location.pathname },
+                            replace: true
+                        });
                     }
                 }
             } catch (err) {
+                console.error("Authentication verification failed:", err);
                 setUser(null);
+                localStorage.removeItem("currentUser");
             } finally {
                 setAuthChecked(true);
             }
@@ -92,21 +133,26 @@ function App() {
     }, [location.pathname]);
 
     // =========================
-    // 3 MINUTE DEMO TIMER (UNAUTHENTICATED ONLY)
+    // 3-MINUTE DEMO TIMER
+    // UNAUTHENTICATED USERS ONLY
     // =========================
 
     useEffect(() => {
-        // Authenticated users never trigger demo locks or popups
+        // Authenticated users never trigger demo locks or popups.
         const hasToken = !!localStorage.getItem("mindease_token");
+
         if (user || hasToken) {
             setDemoLocked(false);
             setShowDemoPopup(false);
+
             localStorage.removeItem("demoStartedAt");
             localStorage.removeItem("demoLocked");
+
             return;
         }
 
         const demoStartedAt = localStorage.getItem("demoStartedAt");
+
         if (!demoStartedAt) {
             setDemoLocked(false);
             setShowDemoPopup(false);
@@ -116,22 +162,29 @@ function App() {
 
         if (localStorage.getItem("demoLocked") === "true") {
             setDemoLocked(true);
+
             if (!isLanding) {
                 setShowDemoPopup(true);
             }
+
             return;
         }
 
         const DEMO_DURATION = 3 * 60 * 1000;
 
         const checkDemoTime = () => {
-            const startedAt = Number(localStorage.getItem("demoStartedAt"));
+            const startedAt = Number(
+                localStorage.getItem("demoStartedAt")
+            );
+
             if (!startedAt) return;
 
             const elapsed = Date.now() - startedAt;
+
             if (elapsed >= DEMO_DURATION) {
                 localStorage.setItem("demoLocked", "true");
                 setDemoLocked(true);
+
                 if (!isLanding) {
                     setShowDemoPopup(true);
                 }
@@ -139,31 +192,53 @@ function App() {
         };
 
         checkDemoTime();
+
         const timer = setInterval(checkDemoTime, 1000);
+
         return () => clearInterval(timer);
     }, [location.pathname, isLanding, user]);
+
+    // =========================
+    // DEMO POPUP ACTIONS
+    // =========================
 
     const handleDemoLogin = () => {
         setShowDemoPopup(false);
         setDemoLocked(false);
+
         localStorage.removeItem("demoStartedAt");
         localStorage.removeItem("demoLocked");
+
         navigate("/login");
     };
 
     const handleDemoSignup = () => {
         setShowDemoPopup(false);
         setDemoLocked(false);
+
         localStorage.removeItem("demoStartedAt");
         localStorage.removeItem("demoLocked");
+
         navigate("/signup");
     };
+
+    // =========================
+    // APPLICATION UI
+    // =========================
 
     return (
         <div className="min-h-screen bg-background overflow-x-hidden flex flex-col">
 
             {/* Top Navigation Bar */}
-            {!isLanding && <Navbar user={user} onLogout={() => setUser(null)} />}
+            {!isLanding && (
+                <Navbar
+                    user={user}
+                    onLogout={() => {
+                        setUser(null);
+                        localStorage.removeItem("currentUser");
+                    }}
+                />
+            )}
 
             {/* Main Content Area */}
             <main className="flex-1 min-w-0 w-full overflow-x-hidden">
@@ -224,6 +299,7 @@ function App() {
                         element={<Professionals />}
                     />
 
+                    {/* Authentication Pages */}
                     <Route
                         path="/login"
                         element={<Login />}
@@ -234,120 +310,135 @@ function App() {
                         element={<Signup />}
                     />
 
+                    {/* Password Recovery Pages */}
+                    <Route
+                        path="/forgot-password"
+                        element={<ForgotPassword />}
+                    />
+
+                    <Route
+                        path="/reset-password"
+                        element={<ResetPassword />}
+                    />
+
                 </Routes>
             </main>
 
             {/* =========================
-                DEMO EXPIRED POPUP (GUESTS ONLY)
+                DEMO EXPIRED POPUP
+                GUESTS ONLY
             ========================= */}
 
-            {showDemoPopup && !user && !localStorage.getItem("mindease_token") && (
-                <div
-                    className="
-                        fixed inset-0 z-[999]
-                        bg-black/50
-                        backdrop-blur-sm
-                        flex items-center
-                        justify-center
-                        p-4
-                    "
-                >
-
+            {showDemoPopup &&
+                !user &&
+                !localStorage.getItem("mindease_token") && (
                     <div
                         className="
-                            bg-white
-                            w-full max-w-md
-                            rounded-3xl
-                            p-8
-                            shadow-2xl
-                            text-center
+                            fixed inset-0 z-[999]
+                            bg-black/50
+                            backdrop-blur-sm
+                            flex items-center
+                            justify-center
+                            p-4
                         "
                     >
-
-                        {/* Icon */}
                         <div
                             className="
-                                w-16 h-16
-                                mx-auto mb-5
-                                rounded-full
-                                bg-primaryLight
-                                flex items-center
-                                justify-center
-                                text-3xl
+                                bg-white
+                                w-full max-w-md
+                                rounded-3xl
+                                p-8
+                                shadow-2xl
+                                text-center
                             "
                         >
-                            💜
-                        </div>
 
-                        {/* Heading */}
-                        <h2
-                            className="
-                                text-2xl
-                                font-heading
-                                font-semibold
-                                text-textPrimary
-                                mb-3
-                            "
-                        >
-                            Your demo has ended
-                        </h2>
-
-                        {/* Message */}
-                        <p
-                            className="
-                                text-textSecondary
-                                leading-relaxed
-                                mb-6
-                            "
-                        >
-                            We hope you enjoyed exploring MindEase! Create an account or log in to continue using your personalized mental wellness space.
-                        </p>
-
-                        {/* Buttons */}
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={handleDemoLogin}
+                            {/* Icon */}
+                            <div
                                 className="
-                                    w-full
-                                    bg-primary
-                                    text-white
-                                    py-3
-                                    rounded-xl
-                                    font-medium
-                                    transition-all
-                                    duration-200
-                                    hover:bg-primary/90
-                                    hover:scale-[1.02]
-                                    hover:shadow-lg
+                                    w-16 h-16
+                                    mx-auto mb-5
+                                    rounded-full
+                                    bg-primaryLight
+                                    flex items-center
+                                    justify-center
+                                    text-3xl
                                 "
                             >
-                                Log In
-                            </button>
+                                💜
+                            </div>
 
-                            <button
-                                onClick={handleDemoSignup}
+                            {/* Heading */}
+                            <h2
                                 className="
-                                    w-full
-                                    border
-                                    border-primary
-                                    text-primary
-                                    py-3
-                                    rounded-xl
-                                    font-medium
-                                    transition-all
-                                    duration-200
-                                    hover:bg-primaryLight
-                                    hover:scale-[1.02]
+                                    text-2xl
+                                    font-heading
+                                    font-semibold
+                                    text-textPrimary
+                                    mb-3
                                 "
                             >
-                                Create Account
-                            </button>
-                        </div>
+                                Your demo has ended
+                            </h2>
 
+                            {/* Message */}
+                            <p
+                                className="
+                                    text-textSecondary
+                                    leading-relaxed
+                                    mb-6
+                                "
+                            >
+                                We hope you enjoyed exploring MindEase!
+                                Create an account or log in to continue using
+                                your personalized mental wellness space.
+                            </p>
+
+                            {/* Buttons */}
+                            <div className="flex flex-col gap-3">
+
+                                <button
+                                    onClick={handleDemoLogin}
+                                    className="
+                                        w-full
+                                        bg-primary
+                                        text-white
+                                        py-3
+                                        rounded-xl
+                                        font-medium
+                                        transition-all
+                                        duration-200
+                                        hover:bg-primary/90
+                                        hover:scale-[1.02]
+                                        hover:shadow-lg
+                                    "
+                                >
+                                    Log In
+                                </button>
+
+                                <button
+                                    onClick={handleDemoSignup}
+                                    className="
+                                        w-full
+                                        border
+                                        border-primary
+                                        text-primary
+                                        py-3
+                                        rounded-xl
+                                        font-medium
+                                        transition-all
+                                        duration-200
+                                        hover:bg-primaryLight
+                                        hover:scale-[1.02]
+                                    "
+                                >
+                                    Create Account
+                                </button>
+
+                            </div>
+                        </div>
                     </div>
-
-                </div>
-            )}
+                )}
 
         </div>
     );
